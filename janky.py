@@ -13,23 +13,26 @@ def main():
     """
         main - where the magic happens
     """
-    opts = parse_commandline()
-    build_params = {}
-    b = None
+    build = None
     build_number = None
+    build_params = {}
+
+    # Make ctrl+C less vomitty.
     signal.signal(signal.SIGINT, signal_handler)
 
-    # Read the config file and connect to Jenkins
+    # Basic setup bits, get cli options, get auth info, connect
+    # to jenkins and grab the job object.
+    opts = parse_commandline()
     (server, uid, token) = load_secrets()
     j = Jenkins(server, uid, token, lazy=True)
     buildjob = j[opts.jobname]
 
     # get the parameters for the build
-    (b, build_number, build_params) = get_build_params(buildjob, opts.build_number, opts.last)
+    (build, build_number, build_params) = get_build_params(buildjob, opts.build_number, opts.last)
 
     # Print out the parameters
     if opts.list:
-        print_params(build_params, b)
+        print_params(build_params, build)
 
     # If we passed in some overriding parameters,
     # place them into our build parameters.
@@ -64,20 +67,20 @@ def get_build_params(buildjob, buildnumber, last):
         Get the build parameters from the last job, a specific job or the defaults
 
     """
-    b = None
+    build = None
     build_params = {}
     build_number = buildnumber
 
     # get the params from the last job
     if last:
-        b = buildjob.get_last_build()
-        build_params = b.get_params()
-        build_number = b.get_number()
+        build = buildjob.get_last_build()
+        build_params = build.get_params()
+        build_number = build.get_number()
 
     # get the params from a specific job number
     elif build_number:
-        b = buildjob.get_build(build_number)
-        build_params = b.get_params()
+        build = buildjob.get_build(build_number)
+        build_params = build.get_params()
 
     # Get the job default parameters
     else:
@@ -86,15 +89,15 @@ def get_build_params(buildjob, buildnumber, last):
             value = parm["defaultParameterValue"]["value"]
             build_params[key] = value
 
-    return(b, build_number, build_params)
+    return (build, build_number, build_params)
 
 
-def print_params(build_params, b):
+def print_params(build_params, build):
     """
         Prints out the build parameters
     """
-    if b:
-        print("\nParameters for:", b)
+    if build:
+        print("\nParameters for:", build)
     else:
         print("\nDefault job parameters:")
 
@@ -107,9 +110,9 @@ def launch_build(job, params, stream):
         Start a build with parameters
     """
     qi = job.invoke(build_params=params)
-    b = qi.get_job()
-    print_params(qi.get_parameters(), b)
-    print('\nBuild:', b, "waiting to start...")
+    build = qi.get_job()
+    print_params(qi.get_parameters(), build)
+    print('\nBuild:', build, "waiting to start...")
 
     build = qi.block_until_building()
     print(build, "started")
@@ -186,15 +189,14 @@ def load_secrets():
         raise ValueError("Config file does not exist")
     cfg = configparser.ConfigParser()
     cfg.read(cfgfile)
-    sections = cfg.sections()
     # Could have a parameter for a specific section, but whatever.
+    sections = cfg.sections()
     sector = sections[0]
-    #['mobilecicd']
     uname = cfg[sector]['uname']
     token = cfg[sector]['token']
     server = cfg[sector]['server']
 
-    return(server, uname, token)
+    return (server, uname, token)
 
 
 def parse_params(params):
@@ -231,7 +233,8 @@ def parse_commandline():
             options (object): Object containing all of the program options set
             on the command line
     """
-    parser = argparse.ArgumentParser(prog="launch_build.py", description= """ """)
+    parser = argparse.ArgumentParser(prog="janky.py", description="""
+                                     Multi purpose Jenkins army knife""")
 
     # add in command line options
     parser.add_argument("-c", "--console", dest="get_console",
@@ -283,6 +286,8 @@ def signal_handler(sig, frame):
         Make aborts not barf all over the place
     """
     # print(sig, frame)
+    if sig != signal.SIGINT:
+        print(f'Wrong signal caught in {frame.f_code.co_name}, {frame.f_locals.keys()}')
     print('\nAborted.')
     sys.exit(0)
 
