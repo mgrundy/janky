@@ -112,7 +112,7 @@ def launch_build(job, params, stream):
     qi = job.invoke(build_params=params)
     b = qi.get_job()
     print_params(qi.get_parameters(), b)
-    print('Build:', b, "waiting to start")
+    print('\nBuild:', b, "waiting to start...")
 
     build = qi.block_until_building()
     print(build, "started")
