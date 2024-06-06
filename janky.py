@@ -1,5 +1,5 @@
 """
-    launch_build.py - The swiss army jenkins knife for lazy programmers (me)
+    janky.py - The swiss army jenkins knife for lazy programmers (me)
 """
 import argparse
 import configparser
@@ -15,77 +15,67 @@ def main():
     """
     opts = parse_commandline()
     build_params = {}
-    param_overrides = {}
     b = None
+    build_number = None
     signal.signal(signal.SIGINT, signal_handler)
-
-    # If we passed in some overriding parameters
-    if opts.params:
-        param_overrides = opts.params
 
     # Read the config file and connect to Jenkins
     (server, uid, token) = load_secrets()
-    j = Jenkins(server, uid, token)
+    j = Jenkins(server, uid, token, lazy=True)
     buildjob = j[opts.jobname]
 
     # get the parameters for the build
-    (b, build_params) = get_build_params(buildjob, opts.build_number, opts.last)
+    (b, build_number, build_params) = get_build_params(buildjob, opts.build_number, opts.last)
 
-    # set the job number
-    if not opts.build_number:
-        job_number = b.get_number()
-    else:
-        job_number = opts.build_number
+    # Print out the parameters
+    if opts.list:
+        print_params(build_params, b)
+        if not opts.fire:
+            sys.exit()
+
+    # If we passed in some overriding parameters,
+    # place them into our build parameters.
+    if opts.params:
+        print("\nOverriding the following parameters:", opts.params)
+        for (key, value) in opts.params.items():
+            build_params[key] = value
 
     # dump out the console
+    # This may crash on unicode decode issues, use -s instead. They fixed it for
+    # streaming the console, but not for just getting it.
     if opts.get_console:
-        # job_number = opts.build_number
-        console_text = get_job_console(buildjob, job_number)
+        console_text = get_job_console(buildjob, build_number)
         print(console_text)
 
     # stream the console unless we're also launching, then that will take care of stream
     if opts.stream_console and not opts.fire:
-        # job_number = opts.build_number
-        stream_console(job=buildjob, number=job_number)
+        stream_console(job=buildjob, number=build_number)
         sys.exit()
 
     # we're taking a job number and killing it
     if opts.killbuild:
-        kill_job(buildjob, job_number)
+        kill_job(buildjob, build_number)
         sys.exit()
-
-    # Print out the parameters
-    if opts.list:
-        if b:
-            print("Job parameters from:", b)
-        else:
-            print("Default job parameters:")
-
-        keys = buildjob.get_params_list()
-        for key in keys:
-            print(key + ":", build_params[key])
-        sys.exit()
-
-    # Copy in the parameters specified on the command line
-    for (key, value) in param_overrides.items():
-        build_params[key] = value
 
     # Launch mode initiate!
     if opts.fire:
         launch_build(buildjob, build_params, opts.stream_console)
 
 
-def get_build_params(buildjob, build_number, last):
+def get_build_params(buildjob, buildnumber, last):
     """
         Get the build parameters from the last job, a specific job or the defaults
 
     """
     b = None
     build_params = {}
+    build_number = buildnumber
+
     # get the params from the last job
     if last:
         b = buildjob.get_last_build()
         build_params = b.get_params()
+        build_number = b.get_number()
 
     # get the params from a specific job number
     elif build_number:
@@ -99,7 +89,20 @@ def get_build_params(buildjob, build_number, last):
             value = parm["defaultParameterValue"]["value"]
             build_params[key] = value
 
-    return(b, build_params)
+    return(b, build_number, build_params)
+
+
+def print_params(build_params, b):
+    """
+        Prints out the build parameters
+    """
+    if b:
+        print("\nParameters for:", b)
+    else:
+        print("\nDefault job parameters:")
+
+    for (key, value) in build_params.items():
+        print(key + ":", value)
 
 
 def launch_build(job, params, stream):
@@ -107,10 +110,9 @@ def launch_build(job, params, stream):
         Start a build with parameters
     """
     qi = job.invoke(build_params=params)
-    print('Build:', qi.get_job(), "waiting to start")
-    print('Parameters:')
-    for (key, value) in qi.get_parameters().items():
-        print(key + ":", value)
+    b = qi.get_job()
+    print_params(qi.get_parameters(), b)
+    print('Build:', b, "waiting to start")
 
     build = qi.block_until_building()
     print(build, "started")
@@ -146,7 +148,7 @@ def kill_job(job, number):
         build.block_until_complete()
         print(f"Build {build} cancelled")
     else:
-        print(build, "-> Build not running.")
+        print(build, "was not running and couldn't be cancelled")
 
 
 def get_job_console(job, number):
@@ -220,7 +222,7 @@ def parse_params(params):
                         value = False
 
                 parsed_params[key] = value
-        print(parsed_params)
+
     return parsed_params
 
 
@@ -232,8 +234,7 @@ def parse_commandline():
             options (object): Object containing all of the program options set
             on the command line
     """
-    parser = argparse.ArgumentParser(prog="janky.py", description= """
-                                     Multi purpose Jenkins army knife""")
+    parser = argparse.ArgumentParser(prog="launch_build.py", description= """ """)
 
     # add in command line options
     parser.add_argument("-c", "--console", dest="get_console",
