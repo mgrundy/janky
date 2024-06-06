@@ -30,8 +30,6 @@ def main():
     # Print out the parameters
     if opts.list:
         print_params(build_params, b)
-        if not opts.fire:
-            sys.exit()
 
     # If we passed in some overriding parameters,
     # place them into our build parameters.
@@ -47,14 +45,13 @@ def main():
         console_text = get_job_console(buildjob, build_number)
         print(console_text)
 
+    # Kill off the specified build
+    if opts.killbuild:
+        kill_job(buildjob, build_number)
+
     # stream the console unless we're also launching, then that will take care of stream
     if opts.stream_console and not opts.fire:
         stream_console(job=buildjob, number=build_number)
-        sys.exit()
-
-    # we're taking a job number and killing it
-    if opts.killbuild:
-        kill_job(buildjob, build_number)
         sys.exit()
 
     # Launch mode initiate!
@@ -137,7 +134,7 @@ def kill_job(job, number):
         Look up the build number and stop it
     """
     if not number:
-        print("Job number not specified")
+        print("\nJob number not specified. Nothing to cancel.")
         return
 
     build = job.get_build(number)
