@@ -53,7 +53,7 @@ def main():
         kill_job(buildjob, build_number, opts.stream_console)
 
     # stream the console unless we're also launching, then that will take care of stream
-    if opts.stream_console and not opts.fire:
+    if opts.stream_console and not (opts.fire or opts.killbuild):
         stream_console(job=buildjob, number=build_number)
         sys.exit()
 
@@ -134,7 +134,7 @@ def get_artifacts(job, number):
 
 def kill_job(job, number, stream=False):
     """
-        Look up the build number and stop it. 
+        Look up the build number and stop it.
             Stream option will let us watch the console log until the job ends
     """
     if not number:
