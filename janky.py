@@ -50,7 +50,7 @@ def main():
 
     # Kill off the specified build
     if opts.killbuild:
-        kill_job(buildjob, build_number)
+        kill_job(buildjob, build_number, opts.stream_console)
 
     # stream the console unless we're also launching, then that will take care of stream
     if opts.stream_console and not opts.fire:
@@ -132,9 +132,10 @@ def get_artifacts(job, number):
     return artifacts
 
 
-def kill_job(job, number):
+def kill_job(job, number, stream=False):
     """
-        Look up the build number and stop it
+        Look up the build number and stop it. 
+            Stream option will let us watch the console log until the job ends
     """
     if not number:
         print("\nJob number not specified. Nothing to cancel.")
@@ -145,7 +146,10 @@ def kill_job(job, number):
     if build.is_running():
         print("Cancelling build", build)
         build.stop()
-        build.block_until_complete()
+        if stream:
+            stream_console(job=job, number=number)
+        else:
+            build.block_until_complete()
         print(f"Build {build} cancelled")
     else:
         print(build, "was not running and couldn't be cancelled")
