@@ -44,7 +44,10 @@ def main():
     j = JenkinsLight(server, uid, token)
 
     #buildjob = j[opts.jobname]
-    #buildjob = get_job(j, opts.jobname)            
+    #buildjob = get_job(j, opts.jobname)
+    if not opts.jobname:
+        print("You have to specify at least one job.")
+        sys.exit(3)
     jobs = opts.jobname.split(",")
     #view_data = get_pipeline_data(buildjob, opts.filename)
     view_data = j.get_janka_pipeline_data(j, opts.jobname, opts.filename)
@@ -152,7 +155,8 @@ def parse_commandline():
             options (object): Object containing all of the program options set
             on the command line
     """
-    parser = argparse.ArgumentParser(prog="launch_build.py", description= """ """)
+    parser = argparse.ArgumentParser(prog="stage-view.py",
+                                     description= """ Jenkins status from the shell.""")
 
     # add in command line options
     parser.add_argument("-f", "--filename", dest="filename",
@@ -161,10 +165,13 @@ def parse_commandline():
     parser.add_argument("-j", "--jobname", dest="jobname",
                         help="Name of Jenkins job pipeline to view",
                         default=None)
+    parser.add_argument("-l", "--limit", dest="limit",
+                        help="Limit the number of lines",
+                        default=None)
 
     options = parser.parse_args()
 
-    if '/' in options.jobname:
+    if options.jobname and '/' in options.jobname:
         options.jobname = options.jobname.replace('/', '/job/')
 
     return options
