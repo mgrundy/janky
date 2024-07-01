@@ -44,54 +44,57 @@ def main():
     j = JenkinsLight(server, uid, token)
 
     #buildjob = j[opts.jobname]
-    #buildjob = get_job(j, opts.jobname)
-
+    #buildjob = get_job(j, opts.jobname)            
+    jobs = opts.jobname.split(",")
     #view_data = get_pipeline_data(buildjob, opts.filename)
     view_data = j.get_janka_pipeline_data(j, opts.jobname, opts.filename)
     console = Console()
+    print(jobs)
 
-    for job in view_data:
-        stages = job["stages"]
+    for jobname in jobs:
+        view_data = get_janka_pipeline_data(j, jobname, opts.filename)
+        line_limit = int(opts.limit) if opts.limit else 999
+        console.print(f'[b][white]{jobname}[/b]: [blue]{j.baseurl}/job/{jobname}[/blue]')
 
-        jobtime = datetime.datetime.fromtimestamp(job["startTimeMillis"]/1000.0)
-        date = jobtime.strftime("%b %d")
-        time = jobtime.strftime(" %H:%M")
-        duration = time_str(job["durationMillis"], short=True)
-        statcolor = job_colors[job["status"]]
-        job_string1 = f'[{statcolor}]{job["status"]}'
-        job_string2 = f'[white]{date}'
-        job_string3 = f'[blue]{time}'
+        for job in view_data:
+            if opts.limit and line_limit <= 0:
+                break
+            line_limit -= 1
 
-        job_renderables = [
-            Panel(
-                Group(
-                    # Align.center(" "),
-                    Align.center(job_string1),
-                    Align.center(job_string2),
-                    Align.center(job_string3),
-                    # Align.center(" "),
-                ),
-                width=15,
-                height=6,
-                title=f'[white]{job["name"]}',
-                subtitle=f"[cyan]{duration}",
-                border_style=statcolor,
-            )
-        ]
-        job_renderables.extend(
-            [
-                Panel(
-                    get_content(stage),
-                    width=15,
-                    height=6,
-                    expand=True,
-                    border_style=job_colors[stage["status"]],
-                )
-                for stage in stages
-            ]
-        )
+            stages = job["stages"]
 
-        console.print(Columns(job_renderables))
+            jobtime = datetime.datetime.fromtimestamp(job["startTimeMillis"]/1000.0)
+            date = jobtime.strftime("%b %d")
+            time = jobtime.strftime(" %H:%M")
+
+            starttime = job["startTimeMillis"]/1000.0
+            duration = time_str(job["durationMillis"])
+            statcolor = job_colors[job["status"]]
+            job_string1 = f'[{statcolor}]{job["status"]}'
+            job_string2 = f'[white]{date}'
+            job_string3 = f'[blue]{time}'
+
+            job_renderables = [Panel(
+                                     Group(
+                                         #Align.center(" "),
+                                         Align.center(job_string1),
+                                         Align.center(job_string2),
+                                         Align.center(job_string3),
+                                         #Align.center(" "),
+                                         ),
+                                     width=15,
+                                     height=6,
+                                     title=f'[white]{job["name"]}',
+                                     subtitle=f'[cyan]{duration}',
+                                     border_style=statcolor)]
+            job_renderables.extend([Panel(get_content(stage),
+                                          width=15,
+                                          height=6,
+                                          expand=True,
+                                          border_style=job_colors[stage["status"]])
+                                    for stage in stages])
+
+            console.print(Columns(job_renderables))
 
 def get_job(j, jobname):
     return j.get_job(jobname)
