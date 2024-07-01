@@ -6,6 +6,7 @@ import configparser
 import os.path
 import signal
 import sys
+
 from jenkinsapi.jenkins import Jenkins
 
 
@@ -216,7 +217,7 @@ def parse_params(params):
         param_pairs = params.split(',')
         for parm in param_pairs:
             if ':' in parm:
-                (key, value) = parm.split(':')
+                (key, value) = parm.split('=')
                 # Fix up Bools if needed
                 match value.lower():
                     case "true":
@@ -237,8 +238,10 @@ def parse_commandline():
             options (object): Object containing all of the program options set
             on the command line
     """
-    parser = argparse.ArgumentParser(prog="janky.py", description="""
-                                     Multi purpose Jenkins army knife""")
+    parser = argparse.ArgumentParser(
+        prog="janky.py",
+        description="""Multi purpose Jenkins army knife""",
+    )
 
     # add in command line options
     parser.add_argument("-c", "--console", dest="get_console",
