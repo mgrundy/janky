@@ -49,13 +49,13 @@ def main():
         print("You have to specify at least one job.")
         sys.exit(3)
     jobs = opts.jobname.split(",")
-    #view_data = get_pipeline_data(buildjob, opts.filename)
-    view_data = j.get_janka_pipeline_data(j, opts.jobname, opts.filename)
+    # view_data = get_pipeline_data(buildjob, opts.filename)
+    # view_data = j.get_janka_pipeline_data(j, opts.jobname, opts.filename)
     console = Console()
-    print(jobs)
+    # print(jobs)
 
     for jobname in jobs:
-        view_data = get_janka_pipeline_data(j, jobname, opts.filename)
+        view_data = j.get_janka_pipeline_data(jobname, opts.filename)
         line_limit = int(opts.limit) if opts.limit else 999
         console.print(f'[b][white]{jobname}[/b]: [blue]{j.baseurl}/job/{jobname}[/blue]')
 
