@@ -10,12 +10,24 @@ charset-normalizer==3.3.2
     # via requests
 idna==3.7
     # via requests
+#jenkinsapi==0.3.13
+# Need the git version for better utf-8 support
 jenkinsapi @ https://github.com/pycontribs/jenkinsapi/archive/master.zip#sha256=4dddf44f8f544818dbdd3837028aa5ed2c1adc0815b8d02d25796b01f5d8d40d
     # via -r requirements.in
+markdown-it-py==3.0.0
+    # via rich
+mdurl==0.1.2
+    # via markdown-it-py
+pygments==2.18.0
+    # via rich
 pytz==2024.1
     # via jenkinsapi
 requests==2.32.3
-    # via jenkinsapi
+    # via
+    #   -r requirements.in
+    #   jenkinsapi
+rich==13.7.1
+    # via -r requirements.in
 six==1.16.0
     # via jenkinsapi
 urllib3==2.2.1
