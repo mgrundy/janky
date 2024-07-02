@@ -75,9 +75,9 @@ everything about the server. job-view needs to get in and out fast.
 
 #### Examples
 Basic use:
-`python3 job-view.py -j big-pipeline-job`
+```python3 job-view.py -j big-pipeline-job```
 Only get one build's worth of info back:
-`python3 job-view.py -j big-pipeline-job -l1`
+```python3 job-view.py -j big-pipeline-job -l1```
 Specify multiple jobs, but only return one build from each:
-`python3 job-view.py -j big-pipeline-job,small-job,medium-job -l1`
+```python3 job-view.py -j big-pipeline-job,small-job,medium-job -l1```
 
