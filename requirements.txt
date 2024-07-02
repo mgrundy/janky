@@ -30,5 +30,8 @@ rich==13.7.1
     # via -r requirements.in
 six==1.16.0
     # via jenkinsapi
+    # if you're on a mac in a cruddy sitch with
+    # ssl errors and corporate monitoring software
+    # urllib3==1.26.19
 urllib3==2.2.1
     # via requests
