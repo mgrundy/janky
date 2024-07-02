@@ -216,13 +216,12 @@ def parse_params(params):
     if params:
         param_pairs = params.split(',')
         for parm in param_pairs:
-            if ':' in parm:
+            if '=' in parm:
                 (key, value) = parm.split('=')
                 # Fix up Bools if needed
-                match value.lower():
-                    case "true":
+                if value.lower() == "true":
                         value = True
-                    case "false":
+                elif value.lower() == "false":
                         value = False
 
                 parsed_params[key] = value
