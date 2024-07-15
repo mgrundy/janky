@@ -71,19 +71,19 @@ put that on and the results from the api call will be saved in the file.
 
 Anyway, it's basically run stage-view and specify a job. I created the
 jenkinslight class to make this faster. Regular Jenkins API tries to understand
-everything about the server. job-view needs to get in and out fast.
+everything about the server. stage-view needs to get in and out fast.
 
 #### Examples
 Basic use:
 ```
-python3 job-view.py -j big-pipeline-job
+python3 stage-view.py -j big-pipeline-job
 ```
 Only get one build's worth of info back:
 ```
-python3 job-view.py -j big-pipeline-job -l1
+python3 stage-view.py -j big-pipeline-job -l1
 ```
 Specify multiple jobs, but only return one build from each:
 ```
-python3 job-view.py -j big-pipeline-job,small-job,medium-job -l1
+python3 stage-view.py -j big-pipeline-job,small-job,medium-job -l1
 ```
 
