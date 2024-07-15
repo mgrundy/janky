@@ -66,7 +66,7 @@ class JenkinsLight():
         """    
         data = None
         url = self.baseurl + '/job/' + jobname + '/wfapi/runs'
-        print(f'pipeline url {url}')
+        # print(f'pipeline url {url}')
         requester = self.requester
 
         response = requester.get_url(url)

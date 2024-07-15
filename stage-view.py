@@ -9,6 +9,10 @@ from typing import Any
 import datetime
 import os
 import sys
+# if Python 3.10 or higher we can use the system keychain (or equiv on other platforms)
+if sys.version_info.major >= 3 and sys.version_info.minor >= 10:
+    import truststore
+    truststore.inject_into_ssl()
 
 #from jenkinsapi.jenkins import Jenkins
 from rich.align import Align
