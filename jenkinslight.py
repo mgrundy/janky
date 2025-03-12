@@ -1,8 +1,12 @@
 '''
-    Ugh. Module
+    JenkinsLight
+    Ugh. Module. I created jenkinslight becuase jenkinsapi pulls a ton of information on startup.
+    It's great, but it's slow for quicky things like grabbing a pipeline status and exiting. 
+    This module uses the jenkinsapi requester because it had the sensible stuff done already.
 '''
 
 import json
+import logging
 from typing import Any
 
 from urllib.parse import urlparse
@@ -14,6 +18,7 @@ from requests import HTTPError, ConnectionError
 
 from jenkinsapi.utils.requester import Requester
 
+logger = logging.getLogger(__name__)
 
 class JenkinsLight():
 
@@ -53,7 +58,7 @@ class JenkinsLight():
             self.requester = requester
 
 
-    def get_janka_pipeline_data(self, jobname, filename):
+    def get_pipeline_data(self, jobname, filename):
         """_summary_
 
         Args:
