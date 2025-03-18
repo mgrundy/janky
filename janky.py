@@ -6,6 +6,8 @@ import configparser
 import os.path
 import signal
 import sys
+import xmltodict
+
 # if Python 3.10 or higher we can use the system keychain (or equiv on other platforms)
 if sys.version_info.major >= 3 and sys.version_info.minor >= 10:
     import truststore
@@ -41,10 +43,15 @@ def main():
 
     # If we passed in some overriding parameters,
     # place them into our build parameters.
-    if opts.params:
-        print("\nOverriding the following parameters:", opts.params)
-        for (key, value) in opts.params.items():
-            build_params[key] = value
+    if opts.params: 
+        if opts.update_job:
+            update_defaults(buildjob, opts.params)
+
+        else:
+            print("\nOverriding the following parameters:", opts.params)
+            for (key, value) in opts.params.items():
+                build_params[key] = value
+
 
     # dump out the console
     # This may crash on unicode decode issues, use -s instead. They fixed it for
@@ -180,6 +187,40 @@ def stream_console(job=None, number=None, build=None):
         print(line)
     return "Console stream complete"
 
+def update_defaults(job=None, options=None):
+    """
+        Use some XML magic to update the job config
+    """
+    job_config_xml = job.get_config()
+    jobconfig = xmltodict.parse(job_config_xml)
+
+    # Grab a reference to the parameterDefinitions section of the job config.
+    parameter_definitions = jobconfig['flow-definition']['properties']['hudson.model.ParametersDefinitionProperty']['parameterDefinitions']
+    # Update the things that were specified
+    for (key, value) in options.items():
+        update_config(parameter_definitions, key, value)
+
+    # This turns the dicts back into xml
+    newconf = xmltodict.unparse(jobconfig, pretty=True)
+    # Then update the job's config
+    job.update_config(newconf)
+
+
+def update_config(parameter_definitions=None, key=None, value=None):
+    """
+        Updates the specific parameter in the config xml
+        Currently only handles bools or strings. Multivalue updates todo.
+    """
+    if type(value) is bool:
+        config = parameter_definitions["hudson.model.BooleanParameterDefinition"]
+    else:
+        config = parameter_definitions["hudson.model.StringParameterDefinition"]
+
+    # this will fail silently if the parameter doesn't exist.
+    # TODO: Make this more informative to user
+    for param in config:
+        if param["name"] == key:
+            param["defaultValue"] = value
 
 def connect_to_jenkins():
     """
@@ -276,6 +317,10 @@ def parse_commandline():
     parser.add_argument("-t", "--last", dest="last",
                         action='store_true',
                         help="Use last job as parameter source",
+                        default=False)
+    parser.add_argument("-u", "--update", dest="update_job",
+                        action='store_true',
+                        help="Update the job's default parameters with suppllied params (Bool and String params only for now)",
                         default=False)
     parser.add_argument("-x", "--exec", dest="fire",
                         action='store_true',
