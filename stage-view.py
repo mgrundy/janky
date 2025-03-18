@@ -4,6 +4,7 @@ Text Mode Jenkins Stage View
 import argparse
 import configparser
 import datetime
+import json
 import os
 import sys
 # if Python 3.10 or higher we can use the system keychain (or equiv on other platforms)
@@ -36,7 +37,7 @@ def main():
         main - where the magic happens
     """
     opts = parse_commandline()
-
+    jobs_hash = {}
     # Read the config file and connect to Jenkins
     (server, uid, token) = load_secrets()
     j = JenkinsLight(server, uid, token)
@@ -53,12 +54,15 @@ def main():
         line_limit = int(opts.limit) if opts.limit else 999
         console.print(f'[b][white]{jobname}[/b]: [blue]{j.baseurl}/job/{jobname}[/blue]')
 
+        jobs_hash[jobname] = []
+
         for job in view_data:
             if opts.limit and line_limit <= 0:
                 break
             line_limit -= 1
 
             stages = job["stages"]
+            jobs_hash[jobname].append(job["id"])
 
             jobtime = datetime.datetime.fromtimestamp(job["startTimeMillis"]/1000.0)
             date = jobtime.strftime("%b %d")
@@ -101,6 +105,10 @@ def main():
 
             console.print(Columns(job_renderables))
 
+    if opts.resultfname is not None:
+        j = json.dumps(jobs_hash, indent=4, ensure_ascii=False)
+        with open(opts.resultfname, 'w', encoding="utf-8") as output_file:
+            output_file.write(j)
 
 def time_str(millis, short=False):
     """Formats millis into hours, minutes, seconds
@@ -170,6 +178,9 @@ def parse_commandline():
     # add in command line options
     parser.add_argument("-f", "--filename", dest="filename",
                         help="Name of file to save pipeline json to",
+                        default=None)
+    parser.add_argument("-rf", "--results", dest="resultfname",
+                        help="Name of file to save run # and names to",
                         default=None)
     parser.add_argument("-j", "--jobname", dest="jobname",
                         help="Name of Jenkins job pipeline to view",
