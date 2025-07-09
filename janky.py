@@ -31,11 +31,23 @@ def main():
     # to jenkins and grab the job object.
     opts = parse_commandline()
     (server, uid, token) = load_secrets()
-    j = Jenkins(server, uid, token, lazy=True)
+
+    try:
+        j = Jenkins(server, uid, token, lazy=True)
+
+    except Exception as e:
+        eprint(e)
+        sys.exit()
+
     buildjob = j[opts.jobname]
 
     # get the parameters for the build
-    (build, build_number, build_params) = get_build_params(buildjob, opts.build_number, opts.last)
+    try:
+        (build, build_number, build_params) = get_build_params(buildjob, opts.build_number, opts.last)
+
+    except Exception as e:
+        eprint(e)
+        sys.exit()
 
     # Print out the parameters
     if opts.list:
@@ -73,6 +85,8 @@ def main():
     if opts.fire:
         launch_build(buildjob, build_params, opts.stream_console)
 
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
 
 def get_build_params(buildjob, buildnumber, last):
     """
