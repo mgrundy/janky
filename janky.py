@@ -322,7 +322,7 @@ def parse_commandline():
                         help="List out parameters for specified build or job defaults",
                         default=False)
     parser.add_argument("-p", "--params", dest="params",
-                        help="Param changes in the form key:value,key2:value",
+                        help="Param changes in the form key=value,key2=value",
                         default=None)
     parser.add_argument("-s", "--stream", dest="stream_console",
                         action='store_true',
@@ -334,7 +334,7 @@ def parse_commandline():
                         default=False)
     parser.add_argument("-u", "--update", dest="update_job",
                         action='store_true',
-                        help="Update the job's default parameters with suppllied params (Bool and String params only for now)",
+                        help="Update the job's default parameters with supplied params (Bool and String params only for now)",
                         default=False)
     parser.add_argument("-x", "--exec", dest="fire",
                         action='store_true',

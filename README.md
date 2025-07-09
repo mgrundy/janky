@@ -24,7 +24,7 @@ This is the workhorse. Get build configuration information. Stream the console
 of a running build. Launch builds. Get the console (not streaming). The fireup is slow though. I should probably make it support multiple jobs.
 
 ```
-usage: janky.py [-h] [-c] [-j JOBNAME] [-k] [-n BUILD_NUMBER] [-l] [-p PARAMS] [-s] [-t] [-x]
+usage: janky.py [-h] [-c] [-j JOBNAME] [-k] [-n BUILD_NUMBER] [-l] [-p PARAMS] [-s] [-t] [-u] [-x]
 
 Multi purpose Jenkins army knife
 
@@ -41,6 +41,7 @@ options:
                         Param changes in the form key=value,key2=value
   -s, --stream          Stream the console for a job, or after build is launched
   -t, --last            Use last job as parameter source
+  -u, --update          Update the job's default parameters with supplied params (Bool and String params only for now)
   -x, --exec            Execute job with specified parameters
 ```
 
