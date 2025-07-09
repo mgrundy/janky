@@ -52,7 +52,8 @@ def main():
     for jobname in jobs:
         view_data = j.get_pipeline_data(jobname, opts.filename)
         line_limit = int(opts.limit) if opts.limit else 999
-        console.print(f'[b][white]{jobname}[/b]: [blue]{j.baseurl}/job/{jobname}[/blue]')
+        display_name = jobname.replace('/job/', '/')
+        console.print(f'[b][white]{display_name}[/b]: [blue]{j.baseurl}/job/{jobname}[/blue]')
 
         jobs_hash[jobname] = []
 
