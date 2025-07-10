@@ -53,7 +53,7 @@ is a hot piece of garbage, but it works-ish. At some point I might put more
 effort into it.
 
 ```
-usage: stage-view.py [-h] [-f FILENAME] [-j JOBNAME] [-l LIMIT]
+usage: stage-view.py [-h] [-f FILENAME] [-rf RESULTFNAME] [-j JOBNAME] [-l LIMIT]
 
 Jenkins status from the shell.
 
@@ -61,18 +61,28 @@ options:
   -h, --help            show this help message and exit
   -f FILENAME, --filename FILENAME
                         Name of file to save pipeline json to
+  -rf RESULTFNAME, --results RESULTFNAME
+                        Name of file to save run # and names to
   -j JOBNAME, --jobname JOBNAME
                         Name of Jenkins job pipeline to view
   -l LIMIT, --limit LIMIT
                         Limit the number of lines
 ```
 
-So, pretty easy. The filename is only for debugging. If something goes wrong
-put that on and the results from the api call will be saved in the file.
-
-Anyway, it's basically run stage-view and specify a job. I created the
+It's basically run stage-view and specify a job. I created the
 jenkinslight class to make this faster. Regular Jenkins API tries to understand
 everything about the server. stage-view needs to get in and out fast.
+
+*New New New:* There is now a colors.cfg file! There is a `Light` and `Dark`
+theme included. Whichever theme `defaultcolors` is set to is what gets used. I
+think I'll add checking for dark or light mode and then a colorscheme can be
+specified for that. So, who's going to make an Elflord theme?
+
+So, pretty easy. The filename is only for debugging. If something goes wrong
+put that on and the results from the api call will be saved in the file. The
+`--results` option saves json objects with the job names and run numbers that
+were displayed. I have no recollection of why I added this. It might have been
+a start towards automating gathering the job numbers to collect results?
 
 #### Examples
 Basic use:

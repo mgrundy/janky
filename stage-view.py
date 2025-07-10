@@ -18,18 +18,9 @@ from rich.console import Console, Group
 from rich.columns import Columns
 from rich.panel import Panel
 from rich.style import Style
+from rich.theme import Theme
 
 from jenkinslight import JenkinsLight
-
-job_colors = {}
-job_colors["SUCCESS"] = "bright_green"
-job_colors["IN_PROGRESS"] = "yellow"
-job_colors["ABORTED"] = "grey50"
-job_colors["UNSTABLE"] = "bright_red"
-job_colors["FAILED"] = "red3"
-job_colors["NOT_EXECUTED"] = "purple"
-#job_colors[""]
-
 
 
 def main():
@@ -42,18 +33,19 @@ def main():
     (server, uid, token) = load_secrets()
     j = JenkinsLight(server, uid, token)
 
+    theme = load_theme()
     if not opts.jobname:
         print("You have to specify at least one job.")
         sys.exit(3)
     jobs = opts.jobname.split(",")
 
-    console = Console()
+    console = Console(theme=theme)
 
     for jobname in jobs:
         view_data = j.get_pipeline_data(jobname, opts.filename)
         line_limit = int(opts.limit) if opts.limit else 999
         display_name = jobname.replace('/job/', '/')
-        console.print(f'[b][white]{display_name}[/b]: [blue]{j.baseurl}/job/{jobname}[/blue]')
+        console.print(f'[job_title]{display_name}[/job_title]: [job_url]{j.baseurl}/job/{jobname}[/job_url]')
 
         jobs_hash[jobname] = []
 
@@ -70,10 +62,10 @@ def main():
             time = jobtime.strftime(" %H:%M")
 
             duration = time_str(job["durationMillis"])
-            statcolor = job_colors[job["status"]]
+            statcolor = job["status"].lower()
             job_string1 = f'[{statcolor}]{job["status"]}'
-            job_string2 = f'[white]{date}'
-            job_string3 = f'[blue]{time}'
+            job_string2 = f'[date]{date}'
+            job_string3 = f"[b][time]{time}[/b]"
 
             job_renderables = [
                 Panel(
@@ -86,8 +78,8 @@ def main():
                     ),
                     width=15,
                     height=6,
-                    title=f'[white]{job["name"]}',
-                    subtitle=f"[cyan]{duration}",
+                    title=f'[stage_title]{job["name"]}',
+                    subtitle=f"[time]{duration}",
                     border_style=statcolor,
                 )
             ]
@@ -98,7 +90,7 @@ def main():
                         width=15,
                         height=6,
                         expand=True,
-                        border_style=job_colors[stage["status"]],
+                        border_style=stage["status"].lower(),
                     )
                     for stage in stages
                 ]
@@ -136,13 +128,27 @@ def time_str(millis, short=False):
 
 def get_content(stage):
     """Extract text from user dict."""
-    #print(stage)
+    # print(stage)
     status = stage["status"]
     name = stage["name"]
     time = time_str(stage["durationMillis"])
+    # return f'[b][white]{name}[/b]\n[{job_colors[stage["status"]]}]{status}\n[cyan]{time}'
+    return f'[b][stage_title]{name}[/b]\n[{status.lower()}]{status}\n[time]{time}'
 
-    return f'[b][white]{name}[/b]\n[{job_colors[stage["status"]]}]{status}\n[cyan]{time}'
 
+def load_theme():
+    """
+        Reads colors.cfg to bring in the themes
+    """
+    cfgfile = 'colors.cfg'
+    if not os.path.isfile(cfgfile):
+        raise ValueError("colors.cfg file does not exist")
+    cfg = configparser.ConfigParser()
+    cfg.read(cfgfile)
+    theme_name = cfg["UserSettings"]["defaultcolors"]
+    theme_colors = cfg[theme_name]
+    session_theme = Theme(theme_colors)
+    return session_theme
 
 def load_secrets():
     """
