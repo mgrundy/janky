@@ -161,7 +161,6 @@ def load_secrets():
     sections = cfg.sections()
     # Could have a parameter for a specific section, but whatever.
     sector = sections[0]
-    #['mobilecicd']
     uname = cfg[sector]['uname']
     token = cfg[sector]['token']
     server = cfg[sector]['server']
