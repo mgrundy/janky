@@ -127,12 +127,11 @@ def time_str(millis, short=False):
 
 
 def get_content(stage):
-    """Extract text from user dict."""
+    """Formats data from the stage status info"""
     # print(stage)
     status = stage["status"]
     name = stage["name"]
     time = time_str(stage["durationMillis"])
-    # return f'[b][white]{name}[/b]\n[{job_colors[stage["status"]]}]{status}\n[cyan]{time}'
     return f'[b][stage_title]{name}[/b]\n[{status.lower()}]{status}\n[time]{time}'
 
 
