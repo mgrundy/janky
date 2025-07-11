@@ -408,7 +408,7 @@ def parse_commandline():
     if options.params:
         options.params = parse_params(options.params)
 
-    if (options.stream_console or options.get_console) and not (options.last or options.build_number is not None):
+    if (options.stream_console or options.get_console) and not (options.last or options.fire or options.build_number is not None):
        parser.error("Must specify a job (-n) or the most recent job (-t) in order to get or stream the console") 
 
     return options
