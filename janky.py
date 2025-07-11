@@ -6,6 +6,7 @@ import configparser
 import os.path
 import signal
 import sys
+import time
 import xmltodict
 
 # if Python 3.10 or higher we can use the system keychain (or equiv on other platforms)
@@ -37,9 +38,15 @@ def main():
 
     except Exception as e:
         eprint(e)
-        sys.exit()
+        print("Failed building Jenkins connection")
+        sys.exit(1)
 
-    buildjob = j[opts.jobname]
+    try:
+        buildjob = j[opts.jobname]
+    except Exception as e:
+        eprint(e)
+        print("Unknown Job: ", opts.jobname)
+        sys.exit(1)
 
     # get the parameters for the build
     try:
@@ -47,7 +54,8 @@ def main():
 
     except Exception as e:
         eprint(e)
-        sys.exit()
+        print("Failed getting build params")
+        sys.exit(1)
 
     # Print out the parameters
     if opts.list:
@@ -79,7 +87,7 @@ def main():
     # stream the console unless we're also launching, then that will take care of stream
     if opts.stream_console and not (opts.fire or opts.killbuild):
         stream_console(job=buildjob, number=build_number)
-        sys.exit()
+        sys.exit(0)
 
     # Launch mode initiate!
     if opts.fire:
@@ -135,15 +143,68 @@ def launch_build(job, params, stream):
     """
         Start a build with parameters
     """
-    qi = job.invoke(build_params=params)
-    build = qi.get_job()
-    print_params(qi.get_parameters(), build)
-    print('\nBuild:', build, "waiting to start...")
+    default_retries = 3
 
-    build = qi.block_until_building()
-    print(build, "started")
-    if stream:
-        stream_console(build=build)
+    try:
+        qi = job.invoke(build_params=params)
+    except Exception as e:
+        eprint(e)
+        eprint("Failed during Job invoke")
+        # This is a fatal, can't recover from it
+        # let caller know 
+        sys.exit(1)
+
+    # First retry block: getting the job handle and printing parameters
+    retries = default_retries
+    while retries > 0:
+        if retries < default_retries:
+            print("Sleeping for 30 seconds")
+            time.sleep(30)
+
+        retries = retries - 1
+
+        try:
+            build = qi.get_job()
+        except Exception as e:
+            eprint(e)
+            continue
+
+        try:
+            print_params(qi.get_parameters(), build)
+            print('\nBuild:', build, "waiting to start...")
+
+        except Exception as e:
+            eprint(e)
+            continue
+
+        # Bust out of this retry loop
+        retries = 0
+
+    # Second retry loop: Blocks until build starts, streams console if needed
+    retries = default_retries
+    while retries > 0:
+        if retries < default_retries:
+            print("Sleeping for 30 seconds")
+            time.sleep(30)
+
+        retries = retries - 1
+
+        try:
+            build = qi.block_until_building()
+            print(build, "started")
+
+        except Exception as e:
+            eprint(e)
+            continue
+
+        if stream:
+            try:
+                stream_console(build=build)
+            except Exception as e:
+                eprint(e)
+                continue
+        # if we made it here we're not in an exception, so leave
+        retries = 0
 
 
 def get_artifacts(job, number):
@@ -346,6 +407,9 @@ def parse_commandline():
     # Parse the build parameter overrides into a dict
     if options.params:
         options.params = parse_params(options.params)
+
+    if (options.stream_console or options.get_console) and not (options.last or options.build_number is not None):
+       parser.error("Must specify a job (-n) or the most recent job (-t) in order to get or stream the console") 
 
     return options
 
