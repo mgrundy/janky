@@ -4,7 +4,7 @@
     It's great, but it's slow for quicky things like grabbing a pipeline status and exiting. 
     This module uses the jenkinsapi requester because it had the sensible stuff done already.
 '''
-
+import ast
 import json
 import logging
 from typing import Any
@@ -100,4 +100,45 @@ class JenkinsLight():
                 output_file.write(j)
 
         return json_data
+
+    def get_pipeline_results(self, jobname, jobno):
+        """_summary_
+
+        Args:
+            j (_type_): _description_
+            jobname (_type_): _description_
+            filename (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """    
+        data = None
+
+        url = self.baseurl + '/job/' + jobname + '/' + jobno + '/testReport/api/python'
+        # print(f'pipeline url {url}')
+        requester = self.requester
+
+        response = requester.get_url(url)
+
+        content: Any = response.content
+
+        if isinstance(content, str):
+            data = content
+        elif isinstance(content, bytes):
+            data = content.decode(response.encoding or "ISO-8859-1")
+
+        if response.status_code != 200:
+            logger.debug(
+                "Failed request at %s with params: %s %s",
+                url,
+                None,
+                "",
+            )
+            response.raise_for_status()
+
+        try:
+             return ast.literal_eval(response.text)
+        except Exception:
+            logger.exception("Inappropriate content found at %s", url)
+            raise JenkinsAPIException("Cannot parse %s" % response.content)
 

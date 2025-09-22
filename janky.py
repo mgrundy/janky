@@ -3,6 +3,7 @@
 """
 import argparse
 import configparser
+import operator
 import os.path
 import signal
 import sys
@@ -15,7 +16,7 @@ if sys.version_info.major >= 3 and sys.version_info.minor >= 10:
     truststore.inject_into_ssl()
 
 from jenkinsapi.jenkins import Jenkins
-
+from jenkinsapi.result import Result
 
 def main():
     """
@@ -72,6 +73,29 @@ def main():
             for (key, value) in opts.params.items():
                 build_params[key] = value
 
+    if opts.results or opts.fails:
+        result_summary = {}
+        from pprint import pprint
+        job_results = build.get_resultset()
+
+        suites_to_sort = job_results._data.get("suites", [])
+        suites = sorted(suites_to_sort, key=operator.itemgetter('name'))
+
+        for suite in sorted(job_results._data.get("suites", []), key=operator.itemgetter('name')):
+            # pprint(suite)
+            found = False
+
+            for case in sorted(suite["cases"], key=operator.itemgetter('className')):
+                result = Result(**case)
+
+                if not opts.fails or case["status"] not in ['PASSED', 'FIXED']:
+                    if not found:
+                        found = True
+                        print(suite["name"])
+                        print("\t", case["className"])
+                    print("\t\t", case["name"], case["status"])
+                    if opts.fails and opts.details:
+                        print("\n", case["errorStackTrace"], "\n")
 
     # dump out the console
     # This may crash on unicode decode issues, use -s instead. They fixed it for
@@ -158,14 +182,16 @@ def launch_build(job, params, stream):
     retries = default_retries
     while retries > 0:
         if retries < default_retries:
-            print("Sleeping for 30 seconds")
+            print("job handle block, sleeping for 30 seconds")
             time.sleep(30)
 
         retries = retries - 1
+        print("Retries left:", retries)
 
         try:
             build = qi.get_job()
         except Exception as e:
+            print("Failed to retrieve job reference.")
             eprint(e)
             continue
 
@@ -174,6 +200,7 @@ def launch_build(job, params, stream):
             print('\nBuild:', build, "waiting to start...")
 
         except Exception as e:
+            print("Failure getting job's  parameters.")
             eprint(e)
             continue
 
@@ -184,25 +211,23 @@ def launch_build(job, params, stream):
     retries = default_retries
     while retries > 0:
         if retries < default_retries:
-            print("Sleeping for 30 seconds")
+            print("Build block, sleeping for 30 seconds")
             time.sleep(30)
 
         retries = retries - 1
+        print("Retries left:", retries)
 
         try:
             build = qi.block_until_building()
             print(build, "started")
 
         except Exception as e:
+            print("Exception while waiting for build to start")
             eprint(e)
             continue
-
         if stream:
-            try:
-                stream_console(build=build)
-            except Exception as e:
-                eprint(e)
-                continue
+            stream_console(build=build)
+
         # if we made it here we're not in an exception, so leave
         retries = 0
 
@@ -255,11 +280,20 @@ def stream_console(job=None, number=None, build=None):
     """
         Look up the build number and grab the console
     """
+    retries = 3
     if job:
         build = job.get_build(number)
+    while retries > 0:
+        try:
+            for line in build.stream_logs():
+                print(line)
+            break
+        except Exception as e:
+            retries = retries - 1
+            print("Stream interrupted: ", e)
+            time.sleep(30)
+            print("Retrying. Retries left:", retries)
 
-    for line in build.stream_logs():
-        print(line)
     return "Console stream complete"
 
 def update_defaults(job=None, options=None):
@@ -367,6 +401,14 @@ def parse_commandline():
                         action='store_true',
                         help="Dump out the console text",
                         default=False)
+    parser.add_argument("-d", "--details", dest="details",
+                        action='store_true',
+                        help="Show error details for test failures",
+                        default=False)
+    parser.add_argument("-f", "--fails", dest="fails",
+                        action='store_true',
+                        help="Show only failed test results",
+                        default=False)
     parser.add_argument("-j", "--jobname", dest="jobname",
                         help="Name of Jenkins job to run",
                         default=None)
@@ -385,6 +427,10 @@ def parse_commandline():
     parser.add_argument("-p", "--params", dest="params",
                         help="Param changes in the form key=value,key2=value",
                         default=None)
+    parser.add_argument("-r", "--results", dest="results",
+                        action='store_true',
+                        help="Display test results",
+                        default=False)
     parser.add_argument("-s", "--stream", dest="stream_console",
                         action='store_true',
                         help="Stream the console for a job, or after build is launched",
@@ -408,8 +454,14 @@ def parse_commandline():
     if options.params:
         options.params = parse_params(options.params)
 
-    if (options.stream_console or options.get_console) and not (options.last or options.fire or options.build_number is not None):
-       parser.error("Must specify a job (-n) or the most recent job (-t) in order to get or stream the console") 
+    # Make sure that options that need a job number get a job number
+    if ((options.stream_console or options.get_console) 
+        and not (options.last or options.fire or options.build_number is not None)):
+       parser.error("Must specify a job (-n) or the most recent job (-t)" 
+                    + " in order to get or stream the console") 
+
+    if (options.results and not (options.last or options.build_number is not None)):
+       parser.error("Must specify a job (-n) or the most recent job (-t) in order to get job results")
 
     return options
 
