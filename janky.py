@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
     janky.py - The swiss army jenkins knife for lazy programmers (me)
 """

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Text Mode Jenkins Stage View
 """
