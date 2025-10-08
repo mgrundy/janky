@@ -44,10 +44,11 @@ def main():
     for jobname in jobs:
         view_data = j.get_pipeline_data(jobname, opts.filename)
         line_limit = int(opts.limit) if opts.limit else 999
+        # This strips the /job/ dividers that wind up in the URLs for display
         display_name = jobname.replace('/job/', '/')
         console.print(f'[job_title]{display_name}[/job_title]: [job_url]{j.baseurl}/job/{jobname}[/job_url]')
 
-        jobs_hash[jobname] = []
+        jobs_hash[jobname] = {}
 
         for job in view_data:
             if opts.limit and line_limit <= 0:
@@ -55,7 +56,7 @@ def main():
             line_limit -= 1
 
             stages = job["stages"]
-            jobs_hash[jobname].append(job["id"])
+            jobs_hash[jobname][job["id"]] = {}
 
             jobtime = datetime.datetime.fromtimestamp(job["startTimeMillis"]/1000.0)
             date = jobtime.strftime("%b %d")
@@ -67,34 +68,65 @@ def main():
             job_string2 = f'[date]{date}'
             job_string3 = f"[b][time]{time}[/b]"
 
+
             job_renderables = [
-                Panel(
-                    Group(
-                        # Align.center(" "),
-                        Align.center(job_string1),
-                        Align.center(job_string2),
-                        Align.center(job_string3),
-                        # Align.center(" "),
-                    ),
-                    width=15,
-                    height=6,
-                    title=f'[stage_title]{job["name"]}',
-                    subtitle=f"[time]{duration}",
-                    border_style=statcolor,
-                )
-            ]
-            job_renderables.extend(
-                [
                     Panel(
-                        get_content(stage),
+                        Group(
+                            # Align.center(" "),
+                            Align.center(job_string1),
+                            Align.center(job_string2),
+                            Align.center(job_string3),
+                            # Align.center(" "),
+                            ),
                         width=15,
                         height=6,
-                        expand=True,
-                        border_style=stage["status"].lower(),
+                        title=f'[stage_title]{job["name"]}',
+                        subtitle=f"[time]{duration}",
+                        border_style=statcolor,
+                        )
+                    ]
+            job_renderables.extend(
+                    [
+                        Panel(
+                            get_content(stage),
+                            width=15,
+                            height=6,
+                            expand=True,
+                            border_style=stage["status"].lower(),
+                            )
+                        for stage in stages
+                        ]
                     )
-                    for stage in stages
-                ]
-            )
+            try:
+                result_data = j.get_pipeline_results(jobname, job["id"])
+                jobs_hash[jobname][job["id"]].update({
+                    'passCount': result_data["passCount"],
+                    'failCount': result_data["failCount"],
+                    'skipCount': result_data["skipCount"]
+                    })
+
+                results_title = '[b][stage_title]Results[/b]'
+                res_string1 = f'[success]Passed: {result_data["passCount"]}'
+                res_string2 = f'[failed]Failed: {result_data["failCount"]}'
+                res_string3 = f'[unstable]Skipped: {result_data["skipCount"]}'
+                job_renderables.extend(
+                        [
+                            Panel(
+                                Group(
+                                    results_title,
+                                    Align.left(res_string1),
+                                    Align.left(res_string2),
+                                    Align.left(res_string3),
+                                    ),
+                                width=15,
+                                height=6,
+                                border_style=statcolor,
+                                )
+                            ]
+                        )
+            except Exception as e:
+                no_results = True
+
 
             console.print(Columns(job_renderables))
 
