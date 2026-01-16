@@ -44,6 +44,9 @@ options:
   -u, --update          Update the job's default parameters with supplied params (Bool and String params only for now)
   -x, --exec            Execute job with specified parameters
 ```
+**Quick note about update!** Update will currently update Bool and String parameters. Not a problem when overriding
+parameters launching a job. The XML schema is wonky and has separate subtrees for the different option types. I prototyped
+a version to do multiple choice parameter updates, but it was an ugly kludge. Will figure out something eventually.
 
 ## oh, one more thing
 ### stage-view.py
