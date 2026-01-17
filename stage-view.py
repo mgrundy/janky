@@ -32,7 +32,7 @@ def main():
     jobs_hash = {}
     # Read the config file and connect to Jenkins
     (server, uid, token) = load_secrets()
-    j = JenkinsLight(server, uid, token)
+    j = JenkinsLight(server, uid, token, timeout=60)
 
     theme = load_theme()
     if not opts.jobname:
@@ -68,7 +68,19 @@ def main():
             job_string1 = f'[{statcolor}]{job["status"]}'
             job_string2 = f'[date]{date}'
             job_string3 = f"[b][time]{time}[/b]"
-
+            
+            # Get fingerprints to find downstream job numbers
+            downstream_string = ""
+            if opts.subjob:
+                try:
+                    fingerprints = j.get_fingerprints(jobname, job["id"])
+                    # Filter for the specified subjob and extract build numbers
+                    subjob_numbers = [fp['owner_build_number'] for fp in fingerprints 
+                                     if fp['owner_job'] == opts.subjob and fp['owner_build_number']]
+                    if subjob_numbers:
+                        downstream_string = ", ".join([str(num) for num in subjob_numbers])
+                except Exception:
+                    pass
 
             job_renderables = [
                     Panel(
@@ -77,7 +89,7 @@ def main():
                             Align.center(job_string1),
                             Align.center(job_string2),
                             Align.center(job_string3),
-                            # Align.center(" "),
+                            Align.center(f"{downstream_string}") if downstream_string else Align.center(" "),
                             ),
                         width=15,
                         height=6,
@@ -225,6 +237,9 @@ def parse_commandline():
                         default=None)
     parser.add_argument("-l", "--limit", dest="limit",
                         help="Limit the number of lines",
+                        default=None)
+    parser.add_argument("-s", "--subjob", dest="subjob",
+                        help="Name of downstream subjob to track (e.g., sample-uiTests-job)",
                         default=None)
 
     options = parser.parse_args()
