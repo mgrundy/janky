@@ -33,22 +33,20 @@ def main():
     # Basic setup bits, get cli options, get auth info, connect
     # to jenkins and grab the job object.
     opts = parse_commandline()
-    (server, uid, token) = load_secrets()
-
+    
     try:
-        j = Jenkins(server, uid, token, lazy=True)
-
+        j = connect_to_jenkins()
     except Exception as e:
         eprint(e)
         print("Failed building Jenkins connection")
-        sys.exit(1)
-
+        return 1
+    
     try:
-        buildjob = j[opts.jobname]
+        buildjob = get_job_from_jenkins(j, opts.jobname)
     except Exception as e:
         eprint(e)
         print("Unknown Job: ", opts.jobname)
-        sys.exit(1)
+        return 1
 
     # get the parameters for the build
     try:
@@ -57,7 +55,7 @@ def main():
     except Exception as e:
         eprint(e)
         print("Failed getting build params")
-        sys.exit(1)
+        return 1
 
     # Print out the parameters
     if opts.list:
@@ -112,11 +110,13 @@ def main():
     # stream the console unless we're also launching, then that will take care of stream
     if opts.stream_console and not (opts.fire or opts.killbuild):
         stream_console(job=buildjob, number=build_number)
-        sys.exit(0)
+        return 0
 
     # Launch mode initiate!
     if opts.fire:
         launch_build(buildjob, build_params, opts.stream_console)
+    
+    return 0
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -334,10 +334,49 @@ def update_config(parameter_definitions=None, key=None, value=None):
 
 def connect_to_jenkins():
     """
-        Makes connection to Jenkins server
+        Makes connection to Jenkins server with retry logic and timeout
     """
     (server, uid, token) = load_secrets()
-    return Jenkins(server, uid, token)
+    max_retries = 5
+    retries = max_retries
+    
+    while retries > 0:
+        try:
+            j = Jenkins(server, uid, token, lazy=True, timeout=60)
+            # put back when we have logger
+            # print(f"Successfully connected to Jenkins server")
+            return j
+        except Exception as e:
+            retries -= 1
+            if retries > 0:
+                wait_time = (max_retries - retries) * 10  # Progressive backoff
+                print(f"Connection failed, retrying in {wait_time} seconds... ({retries} attempts left)")
+                eprint(f"Error: {e}")
+                time.sleep(wait_time)
+            else:
+                raise Exception(f"Jenkins connection failed, no retries left: {e}")
+
+
+def get_job_from_jenkins(jenkins, jobname):
+    """
+        Retrieves a job from Jenkins server with retry logic
+    """
+    max_retries = 5
+    retries = max_retries
+    
+    while retries > 0:
+        try:
+            buildjob = jenkins[jobname]
+            return buildjob
+        except Exception as e:
+            retries -= 1
+            if retries > 0:
+                wait_time = (max_retries - retries) * 10
+                print(f"Failed to retrieve job, retrying in {wait_time} seconds... ({retries} attempts left)")
+                eprint(f"Error: {e}")
+                time.sleep(wait_time)
+            else:
+                raise Exception(f"Unable to retrieve job '{jobname}', no retries left: {e}")
 
 
 def load_secrets():
@@ -479,4 +518,4 @@ def signal_handler(sig, frame):
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
