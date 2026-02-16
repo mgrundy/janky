@@ -34,7 +34,7 @@ def main():
     (server, uid, token) = load_secrets()
     j = JenkinsLight(server, uid, token, timeout=60)
 
-    theme = load_theme()
+    theme = load_theme(opts.theme)
     if not opts.jobname:
         print("You have to specify at least one job.")
         sys.exit(3)
@@ -180,7 +180,7 @@ def get_content(stage):
     return f'[b][stage_title]{name}[/b]\n[{status.lower()}]{status}\n[time]{time}'
 
 
-def load_theme():
+def load_theme(theme_override=None):
     """
         Reads colors.cfg to bring in the themes
     """
@@ -189,7 +189,15 @@ def load_theme():
         raise ValueError("colors.cfg file does not exist")
     cfg = configparser.ConfigParser()
     cfg.read(cfgfile)
-    theme_name = cfg["UserSettings"]["defaultcolors"]
+    
+    if theme_override:
+        theme_name = theme_override
+    else:
+        theme_name = cfg["UserSettings"]["defaultcolors"]
+    
+    if theme_name not in cfg:
+        raise ValueError(f"Theme '{theme_name}' not found in colors.cfg")
+    
     theme_colors = cfg[theme_name]
     session_theme = Theme(theme_colors)
     return session_theme
@@ -240,6 +248,9 @@ def parse_commandline():
                         default=None)
     parser.add_argument("-s", "--subjob", dest="subjob",
                         help="Name of downstream subjob to track (e.g., sample-uiTests-job)",
+                        default=None)
+    parser.add_argument("-t", "--theme", dest="theme",
+                        help="Color theme to use (e.g., Dark, Light, ElfLord)",
                         default=None)
 
     options = parser.parse_args()
